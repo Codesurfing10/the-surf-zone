@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Surf Zone</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect fill='%23040a12' width='32' height='32'/%3E%3Cpath d='M2 20c4-6 8-6 12 0s8 6 16 0' fill='none' stroke='%23f0a23a' stroke-width='2'/%3E%3C/svg%3E">
+<style>
+  :root {
+    --ink: #f4efe6;
+    --sand: #e8c48a;
+    --amber: #f0a23a;
+    --dim: #b7c6ce;
+    --deep: #07111c;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    color: var(--ink);
+    font-family: "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    background:
+      radial-gradient(900px 420px at 70% -10%, rgba(240, 162, 58, 0.18), transparent 60%),
+      radial-gradient(700px 380px at 10% 110%, rgba(20, 70, 110, 0.45), transparent 55%),
+      linear-gradient(180deg, #050910 0%, #0b1c31 46%, #071018 100%);
+    overflow: hidden;
+  }
+  .moon {
+    position: fixed;
+    top: 8vh;
+    right: 9vw;
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #fff6e4, #e7c48a 55%, #c9843a);
+    box-shadow: 0 0 40px rgba(240, 162, 58, 0.35);
+    opacity: 0.85;
+    pointer-events: none;
+  }
+  .stage {
+    position: relative;
+    z-index: 1;
+    height: 100dvh;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 18px 22px 14px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .loc {
+    margin: 0;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    font-size: 0.72rem;
+    color: var(--sand);
+  }
+  h1 {
+    margin: 0;
+    font-family: Impact, Haettenschweiler, "Arial Narrow", "Franklin Gothic Medium", sans-serif;
+    font-weight: 400;
+    font-size: clamp(2.7rem, 7vw, 5.4rem);
+    letter-spacing: 0.06em;
+    line-height: 0.88;
+    text-shadow: 0 3px 0 #1a1208, 0 16px 40px rgba(0, 0, 0, 0.45);
+  }
+  h1 .amber { color: var(--amber); }
+  .tag {
+    margin: 6px 0 0;
+    font-size: 1.05rem;
+    letter-spacing: 0.04em;
+    color: var(--dim);
+  }
+  .viz-wrap {
+    position: relative;
+    height: clamp(120px, 24vh, 210px);
+    flex: 0 0 auto;
+    border-radius: 14px;
+    overflow: hidden;
+    background: linear-gradient(180deg, rgba(8, 24, 40, 0.2), rgba(4, 12, 22, 0.72));
+    border: 1px solid rgba(232, 196, 138, 0.22);
+  }
+  canvas { width: 100%; height: 100%; display: block; }
+  .onair {
+    position: absolute;
+    top: 10px;
+    left: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.72rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--sand);
+  }
+  .led {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: #5c4630;
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,.4);
+  }
+  body.playing .led {
+    background: #ff4d3a;
+    box-shadow: 0 0 10px #ff4d3a;
+  }
+  .now { min-height: 0; }
+  .kicker {
+    display: block;
+    font-size: 0.68rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--sand);
+  }
+  #station {
+    margin: 2px 0 0;
+    font-size: clamp(1.25rem, 2.4vw, 1.8rem);
+    font-weight: 700;
+    line-height: 1.15;
+  }
+  #track {
+    margin: 2px 0 0;
+    color: var(--dim);
+    font-size: 0.95rem;
+    min-height: 1.3em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .home {
+    color: var(--sand);
+    font-size: 0.8rem;
+  }
+  .home:focus-visible, button:focus-visible, input:focus-visible {
+    outline: 2px solid var(--amber);
+    outline-offset: 3px;
+  }
+  .transport {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+  }
+  button {
+    font: inherit;
+    color: var(--ink);
+    background: transparent;
+    border: 1px solid rgba(232, 196, 138, 0.35);
+    border-radius: 999px;
+    cursor: pointer;
+  }
+  button:hover { border-color: var(--amber); }
+  .skip {
+    width: 52px;
+    height: 52px;
+    font-size: 1.15rem;
+  }
+  #play {
+    width: 86px;
+    height: 86px;
+    border: none;
+    background: linear-gradient(180deg, #ffc15a, #e0891e);
+    color: #1a1208;
+    font-family: Impact, Haettenschweiler, "Arial Narrow", sans-serif;
+    letter-spacing: 0.08em;
+    font-size: 1.35rem;
+    box-shadow: 0 8px 24px rgba(240, 162, 58, 0.28);
+  }
+  #play:hover { filter: brightness(1.05); }
+  .mix {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    justify-content: center;
+  }
+  #mute {
+    min-width: 76px;
+    height: 36px;
+    padding: 0 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+  }
+  input[type="range"] {
+    width: min(420px, 56vw);
+    accent-color: var(--amber);
+  }
+  .dial {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 4px;
+    scrollbar-width: thin;
+  }
+  .dial button {
+    flex: 0 0 auto;
+    border-radius: 999px;
+    padding: 6px 10px;
+    font-size: 0.75rem;
+    color: var(--dim);
+    max-width: 220px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .dial button[aria-current="true"] {
+    color: #1a1208;
+    background: var(--sand);
+    border-color: var(--sand);
+  }
+  .fine {
+    margin: 0;
+    text-align: center;
+    color: #8ea0a8;
+    font-size: 0.72rem;
+    letter-spacing: 0.04em;
+  }
+  @media (max-width: 720px) {
+    .moon { width: 36px; height: 36px; top: 10px; right: 10px; opacity: 0.7; }
+    .stage { padding: 12px 12px 10px; gap: 6px; }
+    .tag { font-size: 0.95rem; }
+    #play { width: 74px; height: 74px; }
+    .skip { width: 46px; height: 46px; }
+  }
+  @media (max-height: 740px) {
+    h1 { font-size: clamp(2.1rem, 6vw, 3.2rem); }
+    .moon { display: none; }
+    #play { width: 68px; height: 68px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    body.playing .led { box-shadow: none; }
+  }
+</style>
+</head>
+<body>
+  <div class="moon" aria-hidden="true"></div>
+  <div class="stage">
+    <header>
+      <p class="loc">Solana Beach · California</p>
+      <h1>THE <span class="amber">SURF</span> ZONE</h1>
+      <p class="tag">All rock. All the time.</p>
+    </header>
+
+    <div class="viz-wrap">
+      <div class="onair"><span class="led" aria-hidden="true"></span><span id="air">Off air</span></div>
+      <canvas id="wave" aria-hidden="true"></canvas>
+    </div>
+
+    <section class="now" aria-live="polite">
+      <span class="kicker">Now playing</span>
+      <p id="station">Radio Paradise Rock Mix</p>
+      <p id="track">Live rock stream. Press play.</p>
+      <a id="home" class="home" href="https://radioparadise.com/" target="_blank" rel="noopener noreferrer">Station site</a>
+    </section>
+
+    <div class="transport">
+      <button type="button" class="skip" id="prev" aria-label="Previous station">&#9664;&#9664;</button>
+      <button type="button" id="play" aria-label="Play">PLAY</button>
+      <button type="button" class="skip" id="next" aria-label="Next station">&#9654;&#9654;</button>
+    </div>
+
+    <div class="mix">
+      <button type="button" id="mute" aria-label="Mute" aria-pressed="false">Mute</button>
+      <input id="volume" type="range" min="0" max="1" step="0.01" value="0.85" aria-label="Volume">
+    </div>
+
+    <nav class="dial" id="dial" aria-label="Rock stations"></nav>
+    <p class="fine">Live rock streams, not songs we own.</p>
+  </div>
+
+  <audio id="player" preload="none"></audio>
+
+<script>
+/*
+  Station list checked 2026-10-04. Every stream URL is HTTPS so a GitHub Pages
+  page can play them without the browser blocking mixed content.
+  Each URL was confirmed with curl -sI -L --max-time 15 -A SurfZone/1.0, or a
+  short GET when the server rejected HEAD. Kept only HTTP 200 responses with an
+  audio content-type or icy headers.
+  - 0 N - Classic Rock returns 400 to HEAD and 200 audio/mpeg to GET.
+  Streams are other people's live rock stations. This page does not host music.
+*/
+const STATIONS = [
+  { name: "Radio Paradise Rock Mix", url: "https://stream.radioparadise.com/rock-320", codec: "AAC", homepage: "https://radioparadise.com/" },
+  { name: "SomaFM Left Coast 70s", url: "https://ice2.somafm.com/seventies-320-mp3", codec: "MP3", homepage: "https://somafm.com/seventies/" },
+  { name: "SomaFM Indie Pop Rocks", url: "https://ice2.somafm.com/indiepop-128-aac", codec: "AAC", homepage: "https://somafm.com/indiepop/" },
+  { name: "- 0 N - Classic Rock", url: "https://0n-classicrock.radionetz.de/0n-classicrock.mp3", codec: "MP3", homepage: "http://www.0nradio.com/" },
+  { name: "Virgin Radio Classic Rock", url: "https://icy.unitedradio.it/VirginRockClassics.mp3", codec: "MP3", homepage: "http://www.virginradio.it/sezioni/1219/virgin-radio-rock-classic" },
+  { name: "Virgin Radio Hard Rock", url: "https://icy.unitedradio.it/VirginHardRock.mp3", codec: "MP3", homepage: "http://www.virginradio.it/sezioni/1218/virgin-radio-hard-rock" },
+  { name: "Big R Radio - 80s Metal FM", url: "https://bigrradio.cdnstream1.com/5186_128", codec: "MP3", homepage: "http://www.bigrradio.com/" },
+  { name: "Hard Rock Heaven", url: "https://hydra.cdnstream.com/1521_128", codec: "MP3", homepage: "http://hrhradio.com/" },
+  { name: "ROCK ANTENNE", url: "https://mp3channels.webradio.rockantenne.de/rockantenne", codec: "MP3", homepage: "http://www.rockantenne.de/" },
+  { name: "1.FM Classic Rock Replay", url: "https://strm112.1.fm/crock_mobile_mp3", codec: "MP3", homepage: "http://www.1.fm/" },
+  { name: "Arrow Classic Rock", url: "https://stream.gal.io/arrow", codec: "MP3", homepage: "https://www.arrow.nl/" },
+  { name: "Best of Rock FM Alternative", url: "https://bestofrockfm.stream.vip/altrock/mp3-256/bestofrock.fm/", codec: "MP3", homepage: "https://www.best-of-rock.fm/" }
+];
+
+const audio = document.getElementById("player");
+const playBtn = document.getElementById("play");
+const stationEl = document.getElementById("station");
+const trackEl = document.getElementById("track");
+const homeEl = document.getElementById("home");
+const airEl = document.getElementById("air");
+const muteBtn = document.getElementById("mute");
+const volume = document.getElementById("volume");
+const dial = document.getElementById("dial");
+
+let index = 0;
+let wantPlay = false;
+let token = 0;
+let failStreak = 0;
+let stallTimer = 0;
+let metaAbort = null;
+let icyTitle = "";
+
+audio.volume = 0.85;
+
+function station() { return STATIONS[index]; }
+
+function renderDial() {
+  dial.innerHTML = "";
+  STATIONS.forEach((s, i) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = s.name;
+    b.setAttribute("aria-label", "Play " + s.name);
+    if (i === index) b.setAttribute("aria-current", "true");
+    b.addEventListener("click", () => {
+      if (i === index && wantPlay) return;
+      index = i;
+      failStreak = 0;
+      wantPlay = true;
+      tune(true);
+    });
+    dial.appendChild(b);
+  });
+}
+
+function showStation() {
+  const s = station();
+  stationEl.textContent = s.name;
+  homeEl.href = s.homepage || "#";
+  homeEl.textContent = s.homepage ? "Station site" : "";
+  renderDial();
+  const current = dial.querySelector('[aria-current="true"]');
+  if (current) {
+    const left = current.offsetLeft - (dial.clientWidth - current.clientWidth) / 2;
+    dial.scrollTo({ left: Math.max(0, left), behavior: "auto" });
+  }
+}
+
+function setPlaying(on) {
+  document.body.classList.toggle("playing", on);
+  playBtn.textContent = on ? "PAUSE" : "PLAY";
+  playBtn.setAttribute("aria-label", on ? "Pause" : "Play");
+  airEl.textContent = on ? "On air" : "Off air";
+}
+
+function clearStall() { window.clearTimeout(stallTimer); }
+
+function armStall() {
+  clearStall();
+  const my = token;
+  const started = audio.currentTime || 0;
+  stallTimer = window.setTimeout(() => {
+    if (my !== token || !wantPlay) return;
+    if (!audio.paused && (audio.currentTime || 0) > started + 0.25) return;
+    if (audio.readyState >= 3 && !audio.paused) return;
+    giveUp(my);
+  }, 12000);
+}
+
+function tune(autoplay) {
+  const my = ++token;
+  clearStall();
+  icyTitle = "";
+  if (metaAbort) metaAbort.abort();
+  const s = station();
+  showStation();
+  if (!autoplay) {
+    audio.pause();
+    audio.removeAttribute("src");
+    audio.load();
+    setPlaying(false);
+    trackEl.textContent = "Live rock stream. Press play.";
+    return;
+  }
+  trackEl.textContent = "Tuning " + s.name + "…";
+  audio.src = s.url;
+  armStall();
+  sniff(s.url, my);
+  const pending = audio.play();
+  if (pending && pending.catch) {
+    pending.catch((err) => {
+      if (my !== token || !wantPlay) return;
+      if (err && err.name === "NotAllowedError") {
+        wantPlay = false;
+        setPlaying(false);
+        trackEl.textContent = "Browser blocked sound. Press play.";
+        return;
+      }
+      if (err && err.name === "AbortError") return;
+    });
+  }
+}
+
+function giveUp(my) {
+  if (my !== token || !wantPlay) return;
+  failStreak += 1;
+  if (failStreak >= STATIONS.length) {
+    wantPlay = false;
+    token += 1;
+    clearStall();
+    audio.pause();
+    audio.removeAttribute("src");
+    setPlaying(false);
+    trackEl.textContent = "Every rock stream failed. Press play to try the dial again.";
+    return;
+  }
+  trackEl.textContent = "Signal dropped. Next rock station…";
+  index = (index + 1) % STATIONS.length;
+  tune(true);
+}
+
+function step(dir) {
+  failStreak = 0;
+  index = (index + dir + STATIONS.length) % STATIONS.length;
+  tune(wantPlay);
+}
+
+audio.addEventListener("playing", () => {
+  failStreak = 0;
+  clearStall();
+  setPlaying(true);
+  trackEl.textContent = icyTitle || ("Live on " + station().name + " · " + station().codec);
+});
+audio.addEventListener("pause", () => {
+  if (!wantPlay) setPlaying(false);
+});
+audio.addEventListener("waiting", armStall);
+audio.addEventListener("stalled", armStall);
+audio.addEventListener("error", () => {
+  if (!wantPlay) return;
+  const my = token;
+  window.setTimeout(() => {
+    if (my !== token || !wantPlay) return;
+    if (!audio.error) return;
+    giveUp(my);
+  }, 400);
+});
+
+async function sniff(url, my) {
+  const ac = new AbortController();
+  metaAbort = ac;
+  const killer = window.setTimeout(() => ac.abort(), 8000);
+  try {
+    const res = await fetch(url, { headers: { "Icy-MetaData": "1" }, signal: ac.signal });
+    if (!res.ok || !res.body) return;
+    const reader = res.body.getReader();
+    const chunks = [];
+    let got = 0;
+    while (got < 64000) {
+      const part = await reader.read();
+      if (part.done) break;
+      chunks.push(part.value);
+      got += part.value.length;
+    }
+    try { await reader.cancel(); } catch (e) { /* already closed */ }
+    const buf = new Uint8Array(got);
+    let off = 0;
+    for (const c of chunks) { buf.set(c, off); off += c.length; }
+    let text = "";
+    for (let i = 0; i < buf.length; i++) text += String.fromCharCode(buf[i]);
+    const m = text.match(/StreamTitle='([^']*)'/);
+    if (my !== token || !m || !m[1] || !m[1].trim()) return;
+    icyTitle = m[1].trim();
+    trackEl.textContent = icyTitle;
+  } catch (e) {
+    /* CORS or a short read. Station name stays. Playback is untouched. */
+  } finally {
+    window.clearTimeout(killer);
+  }
+}
+
+playBtn.addEventListener("click", () => {
+  if (wantPlay) {
+    wantPlay = false;
+    clearStall();
+    audio.pause();
+    setPlaying(false);
+    if (!icyTitle) trackEl.textContent = "Paused · " + station().name;
+    return;
+  }
+  wantPlay = true;
+  failStreak = 0;
+  if (!audio.getAttribute("src")) tune(true);
+  else {
+    const my = token;
+    armStall();
+    sniff(station().url, my);
+    audio.play().catch((err) => {
+      if (err && err.name === "NotAllowedError") {
+        wantPlay = false;
+        setPlaying(false);
+        trackEl.textContent = "Browser blocked sound. Press play.";
+      }
+    });
+  }
+});
+
+document.getElementById("prev").addEventListener("click", () => step(-1));
+document.getElementById("next").addEventListener("click", () => step(1));
+
+muteBtn.addEventListener("click", () => {
+  audio.muted = !audio.muted;
+  muteBtn.textContent = audio.muted ? "Unmute" : "Mute";
+  muteBtn.setAttribute("aria-pressed", audio.muted ? "true" : "false");
+  muteBtn.setAttribute("aria-label", audio.muted ? "Unmute" : "Mute");
+});
+
+volume.addEventListener("input", () => {
+  audio.volume = Number(volume.value);
+  if (audio.volume > 0 && audio.muted) {
+    audio.muted = false;
+    muteBtn.textContent = "Mute";
+    muteBtn.setAttribute("aria-pressed", "false");
+    muteBtn.setAttribute("aria-label", "Mute");
+  }
+});
+
+document.addEventListener("keydown", (ev) => {
+  if (ev.target === volume) return;
+  if (ev.code === "Space") { ev.preventDefault(); playBtn.click(); }
+  else if (ev.code === "ArrowRight") step(1);
+  else if (ev.code === "ArrowLeft") step(-1);
+});
+
+showStation();
+trackEl.textContent = "Live rock stream. Press play.";
+
+const canvas = document.getElementById("wave");
+const ctx = canvas.getContext("2d");
+let level = 0;
+function resize() {
+  const rect = canvas.getBoundingClientRect();
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  canvas.width = Math.max(1, Math.floor(rect.width * dpr));
+  canvas.height = Math.max(1, Math.floor(rect.height * dpr));
+}
+window.addEventListener("resize", resize);
+resize();
+
+function draw(t) {
+  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const target = document.body.classList.contains("playing") ? 1 : 0.18;
+  level += (target - level) * 0.04;
+  const w = canvas.width;
+  const h = canvas.height;
+  ctx.clearRect(0, 0, w, h);
+  const g = ctx.createLinearGradient(0, 0, 0, h);
+  g.addColorStop(0, "rgba(8, 28, 48, 0.15)");
+  g.addColorStop(1, "rgba(3, 10, 18, 0.55)");
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, w, h);
+  const bands = [
+    { y: 0.58, amp: 0.10, len: 1.3, speed: 0.0013, color: "rgba(231, 242, 244, 0.35)" },
+    { y: 0.68, amp: 0.14, len: 0.9, speed: 0.0018, color: "rgba(232, 196, 138, 0.75)" },
+    { y: 0.80, amp: 0.08, len: 1.7, speed: 0.0011, color: "rgba(240, 162, 58, 0.45)" }
+  ];
+  bands.forEach((b) => {
+    ctx.beginPath();
+    const base = h * b.y;
+    const amp = h * b.amp * level;
+    for (let x = 0; x <= w; x += 4) {
+      const wave = reduce ? 0 : Math.sin(x / (w * 0.12) * b.len + t * b.speed) * amp;
+      const y = base + wave;
+      if (x === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.strokeStyle = b.color;
+    ctx.lineWidth = Math.max(2, h * 0.02);
+    ctx.stroke();
+  });
+  if (!reduce && level > 0.4) {
+    const bars = 18;
+    for (let i = 0; i < bars; i++) {
+      const n = Math.abs(Math.sin(t * 0.004 + i * 0.7));
+      const bh = (0.15 + n * 0.7) * h * 0.28 * level;
+      const bw = w / (bars * 2.4);
+      const x = (w * 0.08) + i * (w * 0.84) / bars;
+      ctx.fillStyle = i % 3 === 0 ? "rgba(240,162,58,0.85)" : "rgba(231,242,244,0.35)";
+      ctx.fillRect(x, h * 0.42 - bh, bw, bh);
+    }
+  }
+  requestAnimationFrame(draw);
+}
+requestAnimationFrame(draw);
+</script>
+</body>
+</html>
