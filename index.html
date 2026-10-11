@@ -234,17 +234,12 @@
     font-size: 0.75rem;
   }
   .support[hidden], .support [hidden] { display: none !important; }
-  .sponsor {
-    color: var(--sand);
-    letter-spacing: 0.06em;
-  }
-  .sponsor a, .support .link {
+  .support .link {
     color: var(--sand);
     text-decoration: none;
     border-bottom: 1px solid rgba(232, 196, 138, 0.4);
   }
-  .sponsor a:hover, .support .link:hover { color: var(--amber); border-color: var(--amber); }
-  .sponsor .tagline { color: var(--dim); margin-left: 6px; }
+  .support .link:hover { color: var(--amber); border-color: var(--amber); }
   .tip {
     display: inline-block;
     padding: 4px 12px;
@@ -314,7 +309,6 @@
 
     <nav class="dial" id="dial" aria-label="Rock stations"></nav>
     <div class="support" id="support" hidden>
-      <span class="sponsor" id="sponsor" hidden></span>
       <a class="tip" id="tip" href="#" target="_blank" rel="noopener noreferrer" hidden>Tip the DJ · Keep The Surf Zone on air</a>
       <a class="link" id="merch" href="#" target="_blank" rel="noopener noreferrer" hidden>Surf Zone merch</a>
     </div>
@@ -326,26 +320,18 @@
 <script>
 /*
   ===================== SURF ZONE CONFIG =====================
-  Money features live next to the player, never on the audio.
-  Leave a value as "" to keep that feature hidden.
+  Support links sit next to the player, never on the audio.
+  Leave a value as "" to keep that link hidden.
 
-  tipUrl            Your tip page (Ko-fi, Buy Me a Coffee, Stripe
-                    payment link, PayPal.me...). Shows "Tip the DJ".
-  sponsor.name      Local sponsor's name. Shows "Presented by <name>".
-  sponsor.url       Sponsor's website (the name becomes a link).
-  sponsor.tagline   Optional short line after the name.
-  sponsorContactUrl Where would-be sponsors reach you (a form or
-                    mailto: link). Used only when no sponsor is set:
-                    shows "Your surf shop here. Sponsor The Surf Zone."
-  merchUrl          Your merch store URL. Shows "Surf Zone merch".
+  tipUrl    Your tip page (Ko-fi, Buy Me a Coffee, Stripe payment
+            link, PayPal.me...). Shows "Tip the DJ".
+  merchUrl  Your merch store URL. Shows "Surf Zone merch".
 
-  Links must start with https:// (or mailto: for sponsorContactUrl).
+  Links must start with https://
   ============================================================
 */
 const CONFIG = {
   tipUrl: "",
-  sponsor: { name: "", url: "", tagline: "" },
-  sponsorContactUrl: "",
   merchUrl: ""
 };
 
@@ -613,67 +599,20 @@ document.addEventListener("keydown", (ev) => {
   else if (ev.code === "ArrowLeft") step(-1);
 });
 
-function safeUrl(u, allowMailto) {
+function safeUrl(u) {
   const v = String(u || "").trim();
-  if (/^https:\/\//i.test(v)) return v;
-  if (allowMailto && /^mailto:/i.test(v)) return v;
-  return "";
+  return /^https:\/\//i.test(v) ? v : "";
 }
 
 function setupSupport() {
   const box = document.getElementById("support");
-  const sponsorEl = document.getElementById("sponsor");
   const tipEl = document.getElementById("tip");
   const merchEl = document.getElementById("merch");
-  let any = false;
-
-  const sp = CONFIG.sponsor || {};
-  const spName = String(sp.name || "").trim();
-  const spUrl = safeUrl(sp.url);
-  const contact = safeUrl(CONFIG.sponsorContactUrl, true);
-  sponsorEl.textContent = "";
-  if (spName) {
-    sponsorEl.append("Presented by ");
-    if (spUrl) {
-      const a = document.createElement("a");
-      a.href = spUrl;
-      a.target = "_blank";
-      a.rel = "noopener noreferrer sponsored";
-      a.textContent = spName;
-      sponsorEl.append(a);
-    } else {
-      const b = document.createElement("strong");
-      b.textContent = spName;
-      sponsorEl.append(b);
-    }
-    const tag = String(sp.tagline || "").trim();
-    if (tag) {
-      const t = document.createElement("span");
-      t.className = "tagline";
-      t.textContent = tag;
-      sponsorEl.append(t);
-    }
-    sponsorEl.hidden = false;
-    any = true;
-  } else if (contact) {
-    const a = document.createElement("a");
-    a.href = contact;
-    if (!/^mailto:/i.test(contact)) { a.target = "_blank"; a.rel = "noopener noreferrer"; }
-    a.textContent = "Your surf shop here. Sponsor The Surf Zone.";
-    sponsorEl.append(a);
-    sponsorEl.hidden = false;
-    any = true;
-  } else {
-    sponsorEl.hidden = true;
-  }
-
   const tip = safeUrl(CONFIG.tipUrl);
-  if (tip) { tipEl.href = tip; tipEl.hidden = false; any = true; } else tipEl.hidden = true;
-
   const merch = safeUrl(CONFIG.merchUrl);
-  if (merch) { merchEl.href = merch; merchEl.hidden = false; any = true; } else merchEl.hidden = true;
-
-  box.hidden = !any;
+  if (tip) { tipEl.href = tip; tipEl.hidden = false; } else tipEl.hidden = true;
+  if (merch) { merchEl.href = merch; merchEl.hidden = false; } else merchEl.hidden = true;
+  box.hidden = !(tip || merch);
 }
 setupSupport();
 
