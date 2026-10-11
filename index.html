@@ -4,6 +4,22 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>The Surf Zone</title>
+<meta name="description" content="The Surf Zone: all rock, all the time. A free player for twelve live rock radio streams, from classic to hard rock.">
+<link rel="canonical" href="https://thesurfzone.com.co/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="The Surf Zone">
+<meta property="og:title" content="The Surf Zone · All rock. All the time.">
+<meta property="og:description" content="Paddle out and hit play. Twelve live rock stations, from classic to hard rock, in one free player.">
+<meta property="og:url" content="https://thesurfzone.com.co/">
+<meta property="og:image" content="https://thesurfzone.com.co/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="THE SURF ZONE wordmark over a night ocean. All rock. All the time. thesurfzone.com.co">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="The Surf Zone · All rock. All the time.">
+<meta name="twitter:description" content="Paddle out and hit play. Twelve live rock stations, from classic to hard rock, in one free player.">
+<meta name="twitter:image" content="https://thesurfzone.com.co/og.png">
+<meta name="twitter:image:alt" content="THE SURF ZONE wordmark over a night ocean. All rock. All the time. thesurfzone.com.co">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect fill='%23040a12' width='32' height='32'/%3E%3Cpath d='M2 20c4-6 8-6 12 0s8 6 16 0' fill='none' stroke='%23f0a23a' stroke-width='2'/%3E%3C/svg%3E">
 <style>
   :root {
@@ -209,6 +225,37 @@
     background: var(--sand);
     border-color: var(--sand);
   }
+  .support {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 6px 14px;
+    font-size: 0.75rem;
+  }
+  .support[hidden], .support [hidden] { display: none !important; }
+  .sponsor {
+    color: var(--sand);
+    letter-spacing: 0.06em;
+  }
+  .sponsor a, .support .link {
+    color: var(--sand);
+    text-decoration: none;
+    border-bottom: 1px solid rgba(232, 196, 138, 0.4);
+  }
+  .sponsor a:hover, .support .link:hover { color: var(--amber); border-color: var(--amber); }
+  .sponsor .tagline { color: var(--dim); margin-left: 6px; }
+  .tip {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 999px;
+    border: 1px solid rgba(240, 162, 58, 0.6);
+    color: var(--amber);
+    text-decoration: none;
+    letter-spacing: 0.04em;
+  }
+  .tip:hover { background: rgba(240, 162, 58, 0.12); }
+  .support a:focus-visible { outline: 2px solid var(--amber); outline-offset: 3px; }
   .fine {
     margin: 0;
     text-align: center;
@@ -266,12 +313,42 @@
     </div>
 
     <nav class="dial" id="dial" aria-label="Rock stations"></nav>
+    <div class="support" id="support" hidden>
+      <span class="sponsor" id="sponsor" hidden></span>
+      <a class="tip" id="tip" href="#" target="_blank" rel="noopener noreferrer" hidden>Tip the DJ · Keep The Surf Zone on air</a>
+      <a class="link" id="merch" href="#" target="_blank" rel="noopener noreferrer" hidden>Surf Zone merch</a>
+    </div>
     <p class="fine">Live rock streams, not songs we own.</p>
   </div>
 
   <audio id="player" preload="none"></audio>
 
 <script>
+/*
+  ===================== SURF ZONE CONFIG =====================
+  Money features live next to the player, never on the audio.
+  Leave a value as "" to keep that feature hidden.
+
+  tipUrl            Your tip page (Ko-fi, Buy Me a Coffee, Stripe
+                    payment link, PayPal.me...). Shows "Tip the DJ".
+  sponsor.name      Local sponsor's name. Shows "Presented by <name>".
+  sponsor.url       Sponsor's website (the name becomes a link).
+  sponsor.tagline   Optional short line after the name.
+  sponsorContactUrl Where would-be sponsors reach you (a form or
+                    mailto: link). Used only when no sponsor is set:
+                    shows "Your surf shop here. Sponsor The Surf Zone."
+  merchUrl          Your merch store URL. Shows "Surf Zone merch".
+
+  Links must start with https:// (or mailto: for sponsorContactUrl).
+  ============================================================
+*/
+const CONFIG = {
+  tipUrl: "",
+  sponsor: { name: "", url: "", tagline: "" },
+  sponsorContactUrl: "",
+  merchUrl: ""
+};
+
 /*
   Station list checked 2026-10-04. Every stream URL is HTTPS so a GitHub Pages
   page can play them without the browser blocking mixed content.
@@ -535,6 +612,70 @@ document.addEventListener("keydown", (ev) => {
   else if (ev.code === "ArrowRight") step(1);
   else if (ev.code === "ArrowLeft") step(-1);
 });
+
+function safeUrl(u, allowMailto) {
+  const v = String(u || "").trim();
+  if (/^https:\/\//i.test(v)) return v;
+  if (allowMailto && /^mailto:/i.test(v)) return v;
+  return "";
+}
+
+function setupSupport() {
+  const box = document.getElementById("support");
+  const sponsorEl = document.getElementById("sponsor");
+  const tipEl = document.getElementById("tip");
+  const merchEl = document.getElementById("merch");
+  let any = false;
+
+  const sp = CONFIG.sponsor || {};
+  const spName = String(sp.name || "").trim();
+  const spUrl = safeUrl(sp.url);
+  const contact = safeUrl(CONFIG.sponsorContactUrl, true);
+  sponsorEl.textContent = "";
+  if (spName) {
+    sponsorEl.append("Presented by ");
+    if (spUrl) {
+      const a = document.createElement("a");
+      a.href = spUrl;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer sponsored";
+      a.textContent = spName;
+      sponsorEl.append(a);
+    } else {
+      const b = document.createElement("strong");
+      b.textContent = spName;
+      sponsorEl.append(b);
+    }
+    const tag = String(sp.tagline || "").trim();
+    if (tag) {
+      const t = document.createElement("span");
+      t.className = "tagline";
+      t.textContent = tag;
+      sponsorEl.append(t);
+    }
+    sponsorEl.hidden = false;
+    any = true;
+  } else if (contact) {
+    const a = document.createElement("a");
+    a.href = contact;
+    if (!/^mailto:/i.test(contact)) { a.target = "_blank"; a.rel = "noopener noreferrer"; }
+    a.textContent = "Your surf shop here. Sponsor The Surf Zone.";
+    sponsorEl.append(a);
+    sponsorEl.hidden = false;
+    any = true;
+  } else {
+    sponsorEl.hidden = true;
+  }
+
+  const tip = safeUrl(CONFIG.tipUrl);
+  if (tip) { tipEl.href = tip; tipEl.hidden = false; any = true; } else tipEl.hidden = true;
+
+  const merch = safeUrl(CONFIG.merchUrl);
+  if (merch) { merchEl.href = merch; merchEl.hidden = false; any = true; } else merchEl.hidden = true;
+
+  box.hidden = !any;
+}
+setupSupport();
 
 showStation();
 trackEl.textContent = "Live rock stream. Press play.";
